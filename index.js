@@ -1,6 +1,7 @@
 import express from "express";
+import cors from "cors";
 const app = express();
-app.get("/", async (req, res, next) => {
+app.get("/", cors({ origin: "*" }), async (req, res, next) => {
   const query = req.query.username;
   const data = await fetch(`https://users.roblox.com/v1/usernames/users`, {
     method: "POST",
