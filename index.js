@@ -1,27 +1,58 @@
 import express from "express";
 import cors from "cors";
+
 const app = express();
-app.get("/", cors({ origin: "*" }), async (req, res, next) => {
-  const query = req.query.username;
-  const data = await fetch(`https://users.roblox.com/v1/usernames/users`, {
-    method: "POST",
-    body: JSON.stringify({
-      usernames: [query],
-      execludeBannedUsers: false,
-    }),
-  }).then((res) => res.json());
-  const avatarImg = await fetch(
-    `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${data?.data?.[0]?.id}&format=Png&size=150x150`
-  ).then((res) => res.json());
+
+app.get("/", cors(), async (req, res, next) => {
   try {
-    res.status(200).json({ data: data?.data, avatarImg });
-  } catch (error) {
-    next(error);
+    if (req.query.username) {
+      const username = req.query.username;
+
+      const userRes = await fetch(
+        "https://users.roblox.com/v1/usernames/users",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            usernames: [username],
+            excludeBannedUsers: false,
+          }),
+        },
+      ).then((r) => r.json());
+
+      const userId = userRes?.data?.[0]?.id;
+      if (!userId) return res.status(404).json({ msg: "User not found" });
+
+      const avatarImg = await fetch(
+        `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png`,
+      ).then((r) => r.json());
+
+      return res.json({ data: userRes.data[0], avatarImg });
+    }
+
+    if (req.query.id) {
+      const id = req.query.id;
+
+      const userRes = await fetch(
+        `https://users.roblox.com/v1/users/${id}`,
+      ).then((r) => r.json());
+
+      const avatarImg = await fetch(
+        `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${id}&size=150x150&format=Png`,
+      ).then((r) => r.json());
+
+      return res.json({ data: userRes, avatarImg });
+    }
+
+    res.status(400).json({ msg: "please provide username or id" });
+  } catch (err) {
+    next(err);
   }
 });
 
 app.use((err, req, res, next) => {
-  console.log(err.message, err.stack);
+  console.error(err);
+  res.status(500).json({ msg: "Server error" });
 });
 
-app.listen(3000, () => console.log("server runinng"));
+app.listen(3000, () => console.log("server running"));
